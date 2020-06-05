@@ -1,16 +1,17 @@
 //
-//  FontStyles.swift
+//  AppDelegate+FontStyles.swift
 //  CoronaContact
 //
 
-import UIKit
-import SwiftRichString
 import Resolver
+import SwiftRichString
+import UIKit
 
 // swiftlint:disable identifier_name
 enum StyleNames: String {
     case body
     case bodyCenter
+    case bodyLargeBoldRed
     case bodySmall
     case bold
     case boldWhite
@@ -33,13 +34,13 @@ enum StyleNames: String {
 
 enum ModifierNames: String {
     case truncatingMiddle
-
 }
 
 private struct FontSettings {
     struct Size {
         let h1: CGFloat
         let h2: CGFloat
+        let bodyLarge: CGFloat
         let body: CGFloat
         let bodyMedium: CGFloat
         let bodySmall: CGFloat
@@ -49,6 +50,7 @@ private struct FontSettings {
     struct LineHeight {
         let h1: CGFloat
         let h2: CGFloat
+        let bodyLarge: CGFloat
         let body: CGFloat
         let bodyMedium: CGFloat
         let bodySmall: CGFloat
@@ -86,7 +88,6 @@ private struct FontSettings {
 // swiftlint:enable identifier_name
 
 extension AppDelegate {
-
     private func registerBoldStyles(settings: FontSettings) {
         let boldStyle = settings.bodyFontStyle(weight: .bold).byAdding {
             $0.color = UIColor.ccBlack
@@ -133,7 +134,7 @@ extension AppDelegate {
                         style: StyleXML(base: bodyStyle, [
                             "b": Styles.getStyle(.bold),
                             "bred": Styles.getStyle(.boldRed),
-                            "u": underlineStyle
+                            "u": underlineStyle,
                         ]))
 
         let bodyCenterStyle = settings.bodyFontStyle(weight: .regular).byAdding {
@@ -144,14 +145,24 @@ extension AppDelegate {
     }
 
     private func registerBodySmallStyles(settings: FontSettings) {
-        let bodySmallStyle = Style({
+        let bodySmallStyle = Style {
             $0.font = UIFont.systemFont(ofSize: settings.size.bodySmall, weight: .regular)
             $0.color = UIColor.ccBlack
             $0.minimumLineHeight = settings.height.body
             $0.maximumLineHeight = settings.height.body
-        })
+        }
 
         Styles.register(StyleNames.bodySmall.rawValue, style: bodySmallStyle)
+    }
+
+    private func registerBodyLargeStyles(settings: FontSettings) {
+        let bodyLargeBoldRed = Style {
+            $0.font = UIFont.systemFont(ofSize: settings.size.bodyLarge, weight: .bold)
+            $0.color = UIColor.ccRouge
+            $0.minimumLineHeight = settings.height.body
+            $0.maximumLineHeight = settings.height.body
+        }
+        Styles.register(StyleNames.bodyLargeBoldRed.rawValue, style: bodyLargeBoldRed)
     }
 
     private func registerHeadlineStyles(settings: FontSettings) {
@@ -181,9 +192,9 @@ extension AppDelegate {
     }
 
     private func registerModifiers() {
-        let truncatingMiddleModifier = Style({
+        let truncatingMiddleModifier = Style {
             $0.lineBreakMode = .byTruncatingMiddle
-        })
+        }
 
         Styles.register(ModifierNames.truncatingMiddle.rawValue, style: truncatingMiddleModifier)
     }
@@ -194,6 +205,7 @@ extension AppDelegate {
             size: FontSettings.Size(
                 h1: 24,
                 h2: 20,
+                bodyLarge: 16,
                 body: 16,
                 bodyMedium: 16,
                 bodySmall: 16,
@@ -202,6 +214,7 @@ extension AppDelegate {
             height: FontSettings.LineHeight(
                 h1: 32,
                 h2: 24,
+                bodyLarge: 22,
                 body: 22,
                 bodyMedium: 22,
                 bodySmall: 22,
@@ -215,6 +228,7 @@ extension AppDelegate {
                 settings.size = FontSettings.Size(
                     h1: 28,
                     h2: 20,
+                    bodyLarge: 22,
                     body: 18,
                     bodyMedium: 16,
                     bodySmall: 16,
@@ -223,6 +237,7 @@ extension AppDelegate {
                 settings.height = FontSettings.LineHeight(
                     h1: 36,
                     h2: 24,
+                    bodyLarge: 24,
                     body: 24,
                     bodyMedium: 22,
                     bodySmall: 22,
@@ -232,6 +247,7 @@ extension AppDelegate {
                 settings.size = FontSettings.Size(
                     h1: 32,
                     h2: 20,
+                    bodyLarge: 24,
                     body: 20,
                     bodyMedium: 18,
                     bodySmall: 16,
@@ -240,6 +256,7 @@ extension AppDelegate {
                 settings.height = FontSettings.LineHeight(
                     h1: 40,
                     h2: 24,
+                    bodyLarge: 28,
                     body: 28,
                     bodyMedium: 24,
                     bodySmall: 22,
@@ -252,16 +269,17 @@ extension AppDelegate {
 
         registerBoldStyles(settings: settings)
         registerBodyStyles(settings: settings)
+        registerBodyLargeStyles(settings: settings)
         registerBodySmallStyles(settings: settings)
         registerHeadlineStyles(settings: settings)
         registerModifiers()
 
-        let primaryButtonStyle = Style({
+        let primaryButtonStyle = Style {
             $0.font = UIFont.systemFont(ofSize: settings.size.button, weight: .bold)
             $0.color = UIColor.white
             $0.minimumLineHeight = settings.height.button
             $0.maximumLineHeight = settings.height.button
-        })
+        }
         Styles.register(StyleNames.primaryButton.rawValue, style: primaryButtonStyle)
 
         let tableHeaderStyle = Style {
@@ -289,9 +307,9 @@ extension AppDelegate {
         Styles.register(StyleNames.tableDataGreen.rawValue, style: tableDataGreenStyle)
 
         Styles.register(StyleNames.tableData.rawValue,
-        style: StyleXML(base: tableDataStyle, [
-            "red": Styles.getStyle(.tableDataRed)
-        ]))
+                        style: StyleXML(base: tableDataStyle, [
+                            "red": Styles.getStyle(.tableDataRed),
+                        ]))
 
         let secondaryButtonStyle = primaryButtonStyle.byAdding { $0.color = UIColor.ccRouge }
         Styles.register(StyleNames.secondaryButton.rawValue, style: secondaryButtonStyle)

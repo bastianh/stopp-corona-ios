@@ -3,24 +3,21 @@
 //  CoronaContact
 //
 
-import UIKit
 import Resolver
+import UIKit
 
-class MainCoordinator: Coordinator {
+class MainCoordinator: Coordinator, ShareSheetPresentable {
     var navigationController: UINavigationController
+    var rootViewController: UIViewController {
+        navigationController
+    }
 
     @Injected private var notificationService: NotificationService
-    @Injected private var p2pkit: P2PKitService
+    @Injected private var localStorage: LocalStorage
     private weak var mainViewModel: MainViewModel?
 
     init(navigationController: UINavigationController) {
         self.navigationController = navigationController
-    }
-
-    func contacts() {
-        let child = ContactCoordinator(navigationController: navigationController)
-        addChildCoordinator(child)
-        child.start()
     }
 
     func help() {
@@ -39,6 +36,10 @@ class MainCoordinator: Coordinator {
         let child = StartMenuCoordinator(navigationController: navigationController)
         addChildCoordinator(child)
         child.start()
+    }
+
+    func shareApp() {
+        presentShareAppActivity()
     }
 
     func selfTesting() {
@@ -81,6 +82,12 @@ class MainCoordinator: Coordinator {
         child.start()
     }
 
+    func revokeSickness() {
+        let child = RevokeSicknessPersonalDataCoordinator(navigationController: navigationController)
+        addChildCoordinator(child)
+        child.start()
+    }
+
     func revocation() {
         let child = RevocationPersonalDataCoordinator(navigationController: navigationController)
         addChildCoordinator(child)
@@ -98,12 +105,6 @@ class MainCoordinator: Coordinator {
         viewModel?.infectionWarnings = infectionWarnings
     }
 
-    func history() {
-        let child = HistoryCoordinator(navigationController: navigationController)
-        addChildCoordinator(child)
-        child.start()
-    }
-
     override func start() {
         let viewModel = MainViewModel(with: self)
         let viewController = MainViewController.instantiate(with: viewModel)
@@ -111,7 +112,7 @@ class MainCoordinator: Coordinator {
         mainViewModel = viewModel
         navigationController.pushViewController(viewController, animated: false)
 
-        if !UserDefaults.standard.hasSeenOnboarding {
+        if !localStorage.hasSeenOnboarding {
             DispatchQueue.main.async { self.onboarding() }
         } else {
             notificationService.dismissAllNotifications()

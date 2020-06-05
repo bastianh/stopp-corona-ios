@@ -7,7 +7,6 @@ import Foundation
 import Resolver
 
 class SicknessCertificatePersonalDataViewModel: ViewModel {
-
     @Injected private var flowController: SicknessCertificateFlowController
 
     weak var coordinator: SicknessCertificatePersonalDataCoordinator?
@@ -23,13 +22,13 @@ class SicknessCertificatePersonalDataViewModel: ViewModel {
             return
         }
 
-        personalData.warning = .red
+        personalData.diagnosisType = .red
 
         flowController.tanConfirmation(personalData: personalData) { [weak self] result in
             completion()
 
             switch result {
-            case .failure(let error):
+            case let .failure(error):
                 self?.coordinator?.showErrorAlert(title: error.title, error: error.description)
             case .success:
                 self?.coordinator?.tanConfirmation()
@@ -38,6 +37,6 @@ class SicknessCertificatePersonalDataViewModel: ViewModel {
     }
 
     func viewClosed() {
-        self.coordinator?.finish()
+        coordinator?.finish()
     }
 }

@@ -9,14 +9,20 @@ import Moya
 enum NetworkEndpoint: TargetType {
     case configuration
     case infectionMessages(fromId: String?, addressPrefix: String)
-    case infectionInfo(InfectionInfo)
-    case requestTan(String)
+    case requestTan(RequestTan)
+    case publish(TracingKeys)
 }
 
 // MARK: - TargetType Protocol Implementation
+
 extension NetworkEndpoint {
     var baseURL: URL {
-        NetworkConfiguration.baseURL
+        switch self {
+        case .requestTan:
+            return NetworkConfiguration.smsBaseURL
+        default:
+            return NetworkConfiguration.baseURL
+        }
     }
 
     var path: String {
@@ -25,19 +31,19 @@ extension NetworkEndpoint {
             return "/configuration"
         case .infectionMessages:
             return "/infection-messages"
-        case .infectionInfo:
-            return "/infection-info"
         case .requestTan:
             return "/request-tan"
+        case .publish:
+            return "/publish"
         }
     }
 
     var method: Moya.Method {
         switch self {
-        case .configuration, .infectionMessages, .requestTan:
+        case .configuration, .infectionMessages:
             return .get
-        case .infectionInfo:
-            return .put
+        case .requestTan, .publish:
+            return .post
         }
     }
 
@@ -52,10 +58,10 @@ extension NetworkEndpoint {
             }
 
             return .requestParameters(parameters: parameters, encoding: URLEncoding.queryString)
-        case let .infectionInfo(infectionInfo):
-            return .requestCustomJSONEncodable(infectionInfo, encoder: JSONEncoder.withApiDateFormat)
-        case let .requestTan(mobileNumber):
-            return .requestParameters(parameters: ["phone": mobileNumber], encoding: URLEncoding.queryString)
+        case let .requestTan(requestTan):
+            return .requestJSONEncodable(requestTan)
+        case let .publish(tracingKeys):
+            return .requestJSONEncodable(tracingKeys)
         }
     }
 
@@ -64,10 +70,18 @@ extension NetworkEndpoint {
     }
 
     var headers: [String: String]? {
-        [
-            NetworkConfiguration.HeaderKeys.authorizationKey: NetworkConfiguration.authorizationKey,
+        let authorizationKey: String
+        switch self {
+        case .requestTan:
+            authorizationKey = NetworkConfiguration.smsAuthorizationKey
+        default:
+            authorizationKey = NetworkConfiguration.authorizationKey
+        }
+
+        return [
+            NetworkConfiguration.HeaderKeys.authorizationKey: authorizationKey,
             NetworkConfiguration.HeaderKeys.appId: NetworkConfiguration.appId,
-            NetworkConfiguration.HeaderKeys.contentType: NetworkConfiguration.HeaderValues.contentType
+            NetworkConfiguration.HeaderKeys.contentType: NetworkConfiguration.HeaderValues.contentType,
         ]
     }
 }

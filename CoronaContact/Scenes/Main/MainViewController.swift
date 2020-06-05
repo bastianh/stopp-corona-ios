@@ -3,12 +3,11 @@
 //  CoronaContact
 //
 
+import Lottie
 import Reusable
 import UIKit
-import Lottie
 
 final class MainViewController: UIViewController, StoryboardBased, ViewModelBased, FlashableScrollIndicators {
-
     var viewModel: MainViewModel? {
         didSet {
             viewModel?.viewController = self
@@ -17,26 +16,25 @@ final class MainViewController: UIViewController, StoryboardBased, ViewModelBase
 
     var flashScrollIndicatorsAfter: DispatchTimeInterval { .seconds(1) }
 
-    @IBOutlet weak var scrollView: UIScrollView!
-    @IBOutlet weak var userHealthWrapperView: UIView!
-    @IBOutlet weak var userHealthStatusView: QuarantineNotificationView!
-    @IBOutlet weak var contactHealthWrapperView: UIView!
-    @IBOutlet weak var contactHealthStatusView: QuarantineNotificationView!
-    @IBOutlet weak var revocationWrapperView: UIView!
-    @IBOutlet weak var revocationStatusView: QuarantineNotificationView!
-    @IBOutlet weak var historyButton: TransButton!
-    @IBOutlet weak var notificationStackView: UIStackView!
-    @IBOutlet weak var selfTestingStackView: UIStackView!
-    @IBOutlet weak var sicknessCertificateStackView: UIStackView!
-    @IBOutlet weak var automaticHandshakeInactiveView: UIView!
-    @IBOutlet weak var automaticHandshakeActiveView: UIView!
-    @IBOutlet weak var automaticHandshakeAnimationView: AnimationView!
-    @IBOutlet weak var backgroundHandshakeSwitch: UISwitch!
-    @IBOutlet weak var backgroundHandshakeSwitchLabel: TransLabel!
-    @IBOutlet weak var backgroundHandshakeActiveStateLabel: TransLabel!
-    @IBOutlet weak var backgroundHandshakeDescriptionLabel: TransLabel!
-    @IBOutlet weak var contactButton: PrimaryButton!
-    @IBOutlet weak var handshakePausedInformation: UIView!
+    @IBOutlet var scrollView: UIScrollView!
+    @IBOutlet var userHealthWrapperView: UIView!
+    @IBOutlet var userHealthStatusView: QuarantineNotificationView!
+    @IBOutlet var contactHealthWrapperView: UIView!
+    @IBOutlet var contactHealthStatusView: QuarantineNotificationView!
+    @IBOutlet var revocationWrapperView: UIView!
+    @IBOutlet var revocationStatusView: QuarantineNotificationView!
+    @IBOutlet var notificationStackView: UIStackView!
+    @IBOutlet var shareAppCardView: ShareAppCardView!
+    @IBOutlet var selfTestingStackView: UIStackView!
+    @IBOutlet var sicknessCertificateStackView: UIStackView!
+    @IBOutlet var automaticHandshakeInactiveView: UIView!
+    @IBOutlet var automaticHandshakeActiveView: UIView!
+    @IBOutlet var automaticHandshakeAnimationView: AnimationView!
+    @IBOutlet var backgroundHandshakeSwitch: UISwitch!
+    @IBOutlet var backgroundHandshakeSwitchLabel: TransLabel!
+    @IBOutlet var backgroundHandshakeActiveStateLabel: TransLabel!
+    @IBOutlet var backgroundHandshakeDescriptionLabel: TransLabel!
+    @IBOutlet var handshakePausedInformation: UIView!
 
     private weak var launchScreenView: LaunchScreenView!
 
@@ -61,13 +59,13 @@ final class MainViewController: UIViewController, StoryboardBased, ViewModelBase
     }
 
     deinit {
-       removeNotificationObserver()
+        removeNotificationObserver()
     }
 
     private func setupLaunchScreen() {
         launchScreenView = LaunchScreenView.loadFromNib()
 
-        if let currentWindow  = UIApplication.shared.keyWindow {
+        if let currentWindow = UIWindow.key {
             currentWindow.embedSubview(launchScreenView)
 
             Timer.scheduledTimer(withTimeInterval: AppConfiguration.launchScreenDuration, repeats: false) { [weak self] _ in
@@ -86,17 +84,15 @@ final class MainViewController: UIViewController, StoryboardBased, ViewModelBase
     func updateView() {
         guard let viewModel = viewModel, isViewLoaded else { return }
 
-        historyButton.styledTextNormal = String(viewModel.numberOfContacts)
         notificationStackView.isHidden = !viewModel.displayNotifications
 
         configureUserHealthstatusView()
         configureContactHealthStatusView()
         configureRevocationStatusView()
+        configureShareAppCardView()
         configureSelfTestingView()
         configureSicknessCertificateView()
         configureAutomationHandshakeView()
-
-        contactButton.isEnabled = !viewModel.hasAttestedSickness
     }
 
     private func configureUserHealthstatusView() {
@@ -186,7 +182,7 @@ final class MainViewController: UIViewController, StoryboardBased, ViewModelBase
     private func configureAutomationHandshakeView() {
         guard let viewModel = viewModel else { return }
 
-        if viewModel.isBackgroundHandshakeActive == true {
+        if viewModel.isBackgroundHandshakeDisabled == false {
             automaticHandshakeInactiveView.isHidden = true
             automaticHandshakeActiveView.isHidden = false
             automaticHandshakeAnimationView.play()
@@ -221,6 +217,12 @@ final class MainViewController: UIViewController, StoryboardBased, ViewModelBase
         backgroundHandshakeSwitch.isEnabled = !viewModel.hasAttestedSickness
     }
 
+    private func configureShareAppCardView() {
+        shareAppCardView.handlePrimaryTap = { [weak self] in
+            self?.viewModel?.shareApp()
+        }
+    }
+
     private func configureSelfTestingView() {
         guard let viewModel = viewModel else { return }
 
@@ -231,10 +233,6 @@ final class MainViewController: UIViewController, StoryboardBased, ViewModelBase
         guard let viewModel = viewModel else { return }
 
         sicknessCertificateStackView.isHidden = viewModel.hasAttestedSickness
-    }
-
-    @IBAction func contactTapped(_ sender: Any) {
-        viewModel?.contacts()
     }
 
     @IBAction func helpTapped(_ sender: Any) {
@@ -253,18 +251,14 @@ final class MainViewController: UIViewController, StoryboardBased, ViewModelBase
         viewModel?.sicknessCertificate()
     }
 
-    @IBAction func historyButtonTapped(_ sender: Any) {
-        viewModel?.history()
-    }
-
     // MARK: - Event Handling
 
     private func registerNotificationObserver() {
         removeNotificationObserver()
         NotificationCenter.default.addObserver(self,
-            selector: #selector(handleAppWillEnterForegroundNotification(notification:)),
-            name: UIApplication.willEnterForegroundNotification,
-            object: nil)
+                                               selector: #selector(handleAppWillEnterForegroundNotification(notification:)),
+                                               name: UIApplication.willEnterForegroundNotification,
+                                               object: nil)
     }
 
     private func removeNotificationObserver() {

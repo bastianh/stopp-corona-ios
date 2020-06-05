@@ -3,6 +3,7 @@
 //  CoronaContact
 //
 
+import Resolver
 import UIKit
 
 private let dateFormatter = DateFormatter()
@@ -21,12 +22,13 @@ enum UserHealthStatus {
     /// most severy state wins
     init(quarantineDays: Int? = nil) {
         let quarantineDays = quarantineDays ?? 0
+        let localStorage: LocalStorage = Resolver.resolve()
 
-        if UserDefaults.standard.hasAttestedSickness {
+        if localStorage.hasAttestedSickness {
             self = .hasAttestedSickness
-        } else if UserDefaults.standard.isProbablySick {
+        } else if localStorage.isProbablySick {
             self = .isProbablySick(quarantineDays: quarantineDays)
-        } else if UserDefaults.standard.isUnderSelfMonitoring {
+        } else if localStorage.isUnderSelfMonitoring {
             self = .isUnderSelfMonitoring
         } else {
             self = .isHealthy
@@ -85,7 +87,7 @@ enum UserHealthStatus {
 
     var quarantineDays: Int? {
         switch self {
-        case .isProbablySick(let quarantineDays):
+        case let .isProbablySick(quarantineDays):
             return quarantineDays
         default:
             return nil
@@ -116,6 +118,8 @@ enum UserHealthStatus {
 
     var secondaryActionText: String? {
         switch self {
+        case .hasAttestedSickness:
+            return "sickness_certificate_attest_button_revoke".localized
         case .isUnderSelfMonitoring:
             return "self_testing_symptoms_secondary_button".localized
         case .isProbablySick:

@@ -3,11 +3,10 @@
 //  CoronaContact
 //
 
-import UIKit
 import Resolver
+import UIKit
 
 class StartMenuViewModel: ViewModel {
-
     weak var coordinator: StartMenuCoordinator?
     weak var viewController: StartMenuViewController?
     @Injected private var repository: HealthRepository
@@ -18,22 +17,20 @@ class StartMenuViewModel: ViewModel {
         !(repository.isProbablySick || repository.hasAttestedSickness)
     }
 
+    var hasAttestedSickness: Bool { repository.hasAttestedSickness }
+
     init(with coordinator: StartMenuCoordinator) {
         self.coordinator = coordinator
 
         repository.$userHealthStatus
             .subscribe { [weak self] _ in
                 self?.updateView()
-        }
-        .add(to: &subscriptions)
+            }
+            .add(to: &subscriptions)
     }
 
     func closeMenu() {
         coordinator?.finish()
-    }
-
-    func manualHandshake() {
-        coordinator?.contacts()
     }
 
     func checkSymptoms() {
@@ -44,12 +41,24 @@ class StartMenuViewModel: ViewModel {
         coordinator?.sicknessCertificate()
     }
 
+    func revokeSickness() {
+        coordinator?.revokeSickness()
+    }
+
+    func shareApp() {
+        coordinator?.shareApp()
+    }
+
     func aboutApp() {
         coordinator?.openOnboarding()
     }
 
     func website(_ page: ExternalWebsite) {
         page.openInSafariVC()
+    }
+
+    func openSavedIDs() {
+        coordinator?.openSavedIDs()
     }
 
     func openSourceLicenses() {

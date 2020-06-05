@@ -3,34 +3,54 @@
 //  CoronaContact
 //
 
+import ExposureNotification
 import Foundation
 import Resolver
 
 class MainViewModel: ViewModel {
-
-    @Injected private var p2pkit: P2PKitService
     @Injected private var notificationService: NotificationService
-
     @Injected private var repository: HealthRepository
+    @Injected private var localStorage: LocalStorage
+    @Injected private var exposureService: ExposureManager
+    private var observers = [NSObjectProtocol]()
 
     weak var coordinator: MainCoordinator?
     weak var viewController: MainViewController?
 
     var automaticHandshakePaused: Bool {
-        p2pkit.state == .suspended
+        if #available(iOS 13.5, *) {
+            return exposureService.exposureNotificationStatus == .bluetoothOff
+        } else {
+            return false
+        }
     }
 
     var displayNotifications: Bool {
         displayHealthStatus || repository.revocationStatus != nil
     }
+
     var displayHealthStatus: Bool {
         repository.isProbablySick
             || repository.hasAttestedSickness
             || isUnderSelfMonitoring
             || repository.contactHealthStatus != nil
     }
-    var backgroundServiceActive: Bool { p2pkit.isActive }
-    var isBackgroundHandshakeActive: Bool { !UserDefaults.standard.backgroundHandShakeDisabled }
+
+    var backgroundServiceActive: Bool {
+        if #available(iOS 13.5, *) {
+            return exposureService.exposureNotificationStatus == .active
+        } else {
+            return false
+        }
+    }
+
+    var isBackgroundHandshakeDisabled: Bool {
+        if #available(iOS 13.5, *) {
+            return exposureService.authorizationStatus != .authorized || localStorage.backgroundHandshakeDisabled
+        } else {
+            return true
+        }
+    }
 
     var isUnderSelfMonitoring: Bool {
         if case .isUnderSelfMonitoring = repository.userHealthStatus {
@@ -40,12 +60,25 @@ class MainViewModel: ViewModel {
         return false
     }
 
-    var hasAttestedSickness: Bool { repository.hasAttestedSickness }
-    var isProbablySick: Bool { repository.isProbablySick }
-    var revocationStatus: RevocationStatus? { repository.revocationStatus }
-    var contactHealthStatus: ContactHealthStatus? { repository.contactHealthStatus }
-    var userHealthStatus: UserHealthStatus { repository.userHealthStatus }
-    var numberOfContacts: Int { repository.numberOfContacts }
+    var hasAttestedSickness: Bool {
+        repository.hasAttestedSickness
+    }
+
+    var isProbablySick: Bool {
+        repository.isProbablySick
+    }
+
+    var revocationStatus: RevocationStatus? {
+        repository.revocationStatus
+    }
+
+    var contactHealthStatus: ContactHealthStatus? {
+        repository.contactHealthStatus
+    }
+
+    var userHealthStatus: UserHealthStatus {
+        repository.userHealthStatus
+    }
 
     private var subscriptions: Set<AnySubscription> = []
 
@@ -66,12 +99,6 @@ class MainViewModel: ViewModel {
             }
             .add(to: &subscriptions)
 
-        repository.$numberOfContacts
-            .subscribe { [weak self] _ in
-                self?.updateView()
-            }
-            .add(to: &subscriptions)
-
         repository.$infectionWarnings
             .subscribe { [weak self] _ in
                 self?.updateView()
@@ -80,30 +107,27 @@ class MainViewModel: ViewModel {
     }
 
     deinit {
-        NotificationCenter.default.removeObserver(self)
+        for observer in observers {
+            NotificationCenter.default.removeObserver(observer)
+        }
     }
 
     private func registerObservers() {
-        NotificationCenter.default.addObserver(self,
-                                               selector: #selector(checkNewContact),
-                                               name: .DatabaseServiceNewContact,
-                                               object: nil)
-        NotificationCenter.default.addObserver(self,
-                                               selector: #selector(checkNewSickContacts),
-                                               name: .DatabaseServiceNewSickContact,
-                                               object: nil)
-        NotificationCenter.default.addObserver(self,
-                                               selector: #selector(updateView),
-                                               name: .DatabaseSicknessUpdated,
-                                               object: nil)
-        NotificationCenter.default.addObserver(self,
-                                               selector: #selector(updateView),
-                                               name: .P2PDiscoveryChanged,
-                                               object: nil)
+        observers.append(localStorage.$attestedSicknessAt.addObserver(using: updateView))
+        observers.append(localStorage.$isProbablySickAt.addObserver(using: updateView))
+        observers.append(localStorage.$isUnderSelfMonitoring.addObserver(using: updateView))
+        let center = NotificationCenter.default
+        observers.append(center.addObserver(forName: ExposureManager.authorizationStatusChangedNotification,
+                                            object: nil,
+                                            queue: nil,
+                                            using: updateViewByNotification))
+        observers.append(center.addObserver(forName: ExposureManager.notificationStatusChangedNotification,
+                                            object: nil,
+                                            queue: nil,
+                                            using: updateViewByNotification))
     }
 
     func onboardingJustFinished() {
-        p2pkit.start()
         notificationService.askForPermissions()
     }
 
@@ -112,22 +136,16 @@ class MainViewModel: ViewModel {
         updateView()
     }
 
-    @objc func viewWillAppear() {
-        checkNewContact()
-        checkNewSickContacts()
+    func viewWillAppear() {
         repository.refresh()
     }
 
-    @objc func updateView() {
+    func updateView() {
         viewController?.updateView()
     }
 
-    @objc func checkNewContact() {
-        repository.checkNewContact()
-    }
-
-    @objc func checkNewSickContacts() {
-        repository.checkNewSickContacts()
+    private func updateViewByNotification(_: Notification) {
+        updateView()
     }
 
     func tappedPrimaryButtonInUserHealthStatus() {
@@ -145,6 +163,8 @@ class MainViewModel: ViewModel {
 
     func tappedSecondaryButtonInUserHealthStatus() {
         switch repository.userHealthStatus {
+        case .hasAttestedSickness:
+            revokeSickness()
         case .isProbablySick:
             revocation()
         case .isUnderSelfMonitoring:
@@ -163,10 +183,6 @@ class MainViewModel: ViewModel {
         }
     }
 
-    func contacts() {
-        coordinator?.contacts()
-    }
-
     func help() {
         coordinator?.help()
     }
@@ -177,6 +193,10 @@ class MainViewModel: ViewModel {
 
     func startMenu() {
         coordinator?.startMenu()
+    }
+
+    func shareApp() {
+        coordinator?.shareApp()
     }
 
     func selfTesting() {
@@ -191,6 +211,10 @@ class MainViewModel: ViewModel {
         coordinator?.attestedSicknessGuidelines()
     }
 
+    func revokeSickness() {
+        coordinator?.revokeSickness()
+    }
+
     func revocation() {
         coordinator?.revocation()
     }
@@ -203,20 +227,13 @@ class MainViewModel: ViewModel {
         }
     }
 
-    func history() {
-        coordinator?.history()
-    }
-
     func backgroundDiscovery(enable: Bool) {
-        if enable {
-            if p2pkit.unauthorized {
-                coordinator?.showMissingPermissions(type: .bluetooth)
-                updateView()
-            } else {
-                p2pkit.start()
+        if #available(iOS 13.5, *) {
+            exposureService.enableExposureNotifications(enable) { [weak self] error in
+                if let error = error as? ENError, error.code == .notAuthorized {
+                    self?.coordinator?.showMissingPermissions(type: .exposureFramework)
+                }
             }
-        } else {
-            p2pkit.stop()
         }
     }
 }

@@ -3,10 +3,10 @@
 //  CoronaContact
 //
 
-import UIKit
 import Carte
+import UIKit
 
-class StartMenuCoordinator: Coordinator {
+class StartMenuCoordinator: Coordinator, ShareSheetPresentable {
     var navigationController: UINavigationController
 
     lazy var rootViewController: StartMenuViewController = {
@@ -22,12 +22,6 @@ class StartMenuCoordinator: Coordinator {
         navigationController.pushViewController(rootViewController, animated: true)
     }
 
-    func contacts() {
-        let child = ContactCoordinator(navigationController: navigationController)
-        addChildCoordinator(child)
-        child.start()
-    }
-
     func selfTesting() {
         let child = SelfTestingCoordinator(navigationController: navigationController)
         addChildCoordinator(child)
@@ -40,10 +34,26 @@ class StartMenuCoordinator: Coordinator {
         child.start()
     }
 
+    func revokeSickness() {
+        let child = RevokeSicknessPersonalDataCoordinator(navigationController: navigationController)
+        addChildCoordinator(child)
+        child.start()
+    }
+
+    func shareApp() {
+        presentShareAppActivity()
+    }
+
     func openOnboarding() {
         let child = OnboardingCoordinator(navigationController: navigationController)
         addChildCoordinator(child)
         child.start(context: .regular)
+    }
+
+    func openSavedIDs() {
+        let child = SavedIDsCoordinator(navigationController: navigationController)
+        addChildCoordinator(child)
+        child.start()
     }
 
     func openLicences() {

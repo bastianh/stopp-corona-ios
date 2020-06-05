@@ -1,19 +1,25 @@
 //
-//  NetworkAlamofireManager.swift
+//  NetworkSession.swift
 //  CoronaContact
 //
 
-import Foundation
 import Alamofire
+import Foundation
 
 class NetworkSession {
     static func session() -> Alamofire.Session {
         // Setup certificates for SSL pinning in order to mitigate MITM attacks
         let evaluators = [
-            AppConfiguration.apiHostName: PublicKeysTrustEvaluator()
+            AppConfiguration.apiHostName: PublicKeysTrustEvaluator(),
+            AppConfiguration.apiSmsHostName: PublicKeysTrustEvaluator(),
         ]
         let trustManager = ServerTrustManager(evaluators: evaluators)
         let configuration = URLSessionConfiguration.af.default
-        return Alamofire.Session(configuration: configuration, serverTrustManager: trustManager)
+
+        #if DEBUG
+            return Alamofire.Session.default
+        #else
+            return Alamofire.Session(configuration: configuration, serverTrustManager: trustManager)
+        #endif
     }
 }
