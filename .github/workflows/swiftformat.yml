@@ -1,18 +1,6 @@
-name: Swift
+name: Swiftformat
 
-on:
-  push:
-    branches:
-      - develop
-    paths:
-      - ".github/workflows/swift.yaml"
-      - "**.swift"
-      - "**/Package.resolved"
-  pull_request:
-    paths:
-      - ".github/workflows/swift.yaml"
-      - "**.swift"
-      - "**/Package.resolved"
+on: pull_request
 
 jobs:
   swiftformat:
