@@ -24,22 +24,31 @@ jobs:
         with:
           submodules: recursive
 
+      - name: Restore swift build cache
+        uses: actions/cache@v2
+        with:
+          path: .build
+          key: ${{ runner.os }}-spm2-
+          restore-keys: |
+            ${{ runner.os }}-spm2-
+
       - name: swift build
         run: |
           if [ -d ".build" ]; then
             if ! [ -x "$(command -v swift-format)" ]; then
-              sudo cp -f .build/release/swift-format /usr/local/bin/swift-format
+              sudo cp -f .build/release/swiftformat /usr/local/bin/swiftformat
             fi
           else
-            git clone -b swift-5.2-branch https://github.com/apple/swift-format.git
-            cd swift-format
+            git clone --depth 1 https://github.com/nicklockwood/SwiftFormat
+            cd SwiftFormat
             swift build --disable-sandbox -c release
             mv .build .. && cd ..
-            sudo cp -f .build/release/swift-format /usr/local/bin/swift-format
+            rm -rf SwiftFormat
+            sudo cp -f .build/release/swiftformat /usr/local/bin/swiftformat
           fi
 
-      - name: Format Swift code
-        run: swiftformat --verbose .
+      - name: Run swiftformat
+        run: swiftformat .
 
       - name: Verify formatted code is unchanged
         run: git diff --exit-code HEAD
